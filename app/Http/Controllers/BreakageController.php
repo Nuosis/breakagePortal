@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\FileMakerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class BreakageController extends Controller
 {
@@ -22,7 +23,8 @@ class BreakageController extends Controller
     public function lookupBreakage(Request $request)
     {
         $studentId = $request->input('student_id');
-        $breakageData = $this->fileMakerService->fetchBreakageData($studentId);
+        $breakageData = $this->fileMakerService->fetchBreakageData($studentId);        // Log the fetched data for debugging
+        Log::info('Breakage Data:', $breakageData);
 
         return view('lookup-results', compact('breakageData'));
     }

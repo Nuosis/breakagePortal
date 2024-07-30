@@ -27,23 +27,25 @@ class FileMakerService
         ]);
     }
 
-    private function getToken($dbName = "InventoryTracker")
+    private function getToken()
     {
         try {
-            $uri = $dbName . "/sessions";
+            $uri = "/sessions";
             $url = $this->baseUrl . $uri;
             $authHeader = "Basic " . base64_encode("{$this->username}:{$this->password}");
         
+            
+            Log::info('token aquired');
+        
             $response = $this->client->post($url, [
-                'headers' => ['Authorization' => $authHeader],
-                'verify' => false // Bypass SSL verification TURN OFF IN PRODUCTION
+                'headers' => ['Authorization' => $authHeader]
             ]);
         
             // Decode the response body to an array
             $responseData = json_decode($response->getBody()->getContents(), true);
             
-            //Log the raw response data
-            Log::info('Token Response:', $responseData);
+            // Log the raw response data
+            // Log::info('Raw Response:', $responseData);
         
             // Check for the existence of the token in the response data
             if ($response->getStatusCode() === 200 && isset($responseData['response']['token'])) {
@@ -63,12 +65,11 @@ class FileMakerService
         }
     }
     
-    private function releaseToken($token, $dbName = "InventoryTracker")
+    private function releaseToken($token)
     {
         try {
-            $this->client->delete("/fmi/data/vLatest/databases/{$dbName}/sessions/{$token}", [
-                'headers' => ['Authorization' => "Bearer {$token}"],
-                'verify' => false //TURN OFF IN PRODUCTION
+            $this->client->delete("/fmi/data/vLatest/databases/clarityData/sessions/{$token}", [
+                'headers' => ['Authorization' => "Bearer {$token}"]
             ]);
             Log::info('token released');
         } catch (GuzzleException $e) {
@@ -84,11 +85,11 @@ class FileMakerService
             return ['error' => 'Failed to retrieve token'];
         }
     
-        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/_find";  // Adjusted endpoint for finding records
+        $url = "/fmi/data/vLatest/databases/clarityData/layouts/dapiBillable/_find";  // Adjusted endpoint for finding records
         $params = [  // Define the query parameters as JSON
             'query' => [
                 [
-                    'StudentID' => $studentId
+                    '_partyID' => $studentId
                 ]
             ]
         ];
@@ -99,13 +100,12 @@ class FileMakerService
             // Make a POST request to the find endpoint with the query parameters
             $response = $this->client->post($url, [
                 'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
-                'json' => $params,
-                'verify' => false //TURN OFF IN PRODUCTION
+                'json' => $params  // Sending JSON data directly
             ]);
     
             $data = json_decode($response->getBody()->getContents(), true);
-            Log::info('Fetch Breakage Data Response:', $data);
-            $this->releaseToken($token,"InventoryTracker");
+            // Log::info('Fetch Breakage Data Response:', $data);
+            $this->releaseToken($token);
     
             if (isset($data['response'])) {
                 return $data;  // Return only the response part if needed, adjust based on actual API response
@@ -113,7 +113,7 @@ class FileMakerService
                 return ['error' => 'No data found'];  // Handle the case where no data is returned
             }
         } catch (GuzzleException $e) {
-            $this->releaseToken($token,"InventoryTracker");
+            $this->releaseToken($token);
             Log::error('Failed to fetch breakage data: ' . $e->getMessage());
             return ['error' => 'Failed to fetch breakage data'];
         }

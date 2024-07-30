@@ -12,7 +12,7 @@
             @csrf
             <div class="form-group" style="margin-bottom: 1.5rem;">
                 <label for="student_id" style="display: block; color: #4a5568;">Student ID</label>
-                <input type="text" id="student_id" name="student_id" style="margin-top: 0.25rem; display: block; width: 100%; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 0.25rem; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;">
+                <input type="text" id="student_id" name="student_id" style="margin-top: 0.25rem; display: block; width: 100%; padding: 0.5rem; font-size: 1rem; border: 1px solid #cbd5e0; border-radius: 0.25rem; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;">
             </div>
             <button type="submit" style="width: 100%; padding: 0.5rem; background-color: rgba(72, 151, 222, 0.85); color: white; font-weight: 600; border-radius: 0.25rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); border: none; cursor: pointer; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;">
                 FIND

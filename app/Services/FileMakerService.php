@@ -118,5 +118,46 @@ class FileMakerService
             return ['error' => 'Failed to fetch breakage data'];
         }
     }
+
+    public function getSites($query = "*")
+    {
+        $token = $this->getToken();
+    
+        if (!$token) {
+            return ['error' => 'Failed to retrieve token'];
+        }
+    
+        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/dapi_Sites_List/_find";  // Adjusted endpoint for finding records
+        $params = [  // Define the query parameters as JSON
+            'query' => [
+                [
+                    'Site' => $query
+                ]
+            ]
+        ];
+    
+        try {
+            // Make a POST request to the find endpoint with the query parameters
+            $response = $this->client->post($url, [
+                'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
+                'json' => $params,
+                'verify' => false //TURN OFF IN PRODUCTION
+            ]);
+    
+            $data = json_decode($response->getBody()->getContents(), true);
+            Log::info('Fetch Sites Response:', $data);
+            $this->releaseToken($token,"InventoryTracker");
+    
+            if (isset($data['response'])) {
+                return $data;  // Return only the response part if needed, adjust based on actual API response
+            } else {
+                return ['error' => 'No data found'];  // Handle the case where no data is returned
+            }
+        } catch (GuzzleException $e) {
+            $this->releaseToken($token,"InventoryTracker");
+            Log::error('Failed to fetch sites data: ' . $e->getMessage());
+            return ['error' => 'Failed to fetch sites data'];
+        }
+    }
     
 }

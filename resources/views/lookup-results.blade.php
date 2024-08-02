@@ -51,11 +51,13 @@
               <input type="text" id="fa" name="fa" required style="margin-top: 0.25rem; display: block; width: 95.5%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.25rem; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; font-size: 1rem;">
           </div>
           <div class="form-group" style="margin-bottom: 1rem;">
-              <label for="school" style="display: block; color: #4a5568; font-size: 1rem;">School</label>
-              <select id="school" name="school" required style="margin-top: 0.25rem; display: block; width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.25rem; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; font-size: 1rem; height: calc(1.5em + 0.75rem + 2px);">
-                  <option value="" disabled selected>Select option</option>
-                  <!-- Add your options here -->
-              </select>
+            <label for="school" style="display: block; color: #4a5568; font-size: 1rem;">School</label>
+            <select id="school" name="school" required style="margin-top: 0.25rem; display: block; width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.25rem; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075); outline: none; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; font-size: 1rem; height: calc(1.5em + 0.75rem + 2px);">
+                <option value="" disabled selected>Select option</option>
+                @foreach($sites['response']['data'] as $site)
+                    <option value="{{ $site['fieldData']['Site'] }}">{{ $site['fieldData']['Site'] }}</option>
+                @endforeach
+            </select>
           </div>
           <div class="form-group" style="margin-bottom: 1rem;">
               <label for="damage_type" style="display: block; color: #4a5568; font-size: 1rem;">Type of damage</label>

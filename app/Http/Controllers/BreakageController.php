@@ -23,10 +23,13 @@ class BreakageController extends Controller
     public function lookupBreakage(Request $request)
     {
         $studentId = $request->input('student_id');
-        $breakageData = $this->fileMakerService->fetchBreakageData($studentId);        // Log the fetched data for debugging
-        Log::info('Breakage Data:', $breakageData);
+        $breakageData = $this->fileMakerService->fetchBreakageData($studentId);
+        $sites = $this->fileMakerService->getSites();
 
-        return view('lookup-results', compact('breakageData'));
+        Log::info('Breakage Data:', $breakageData);
+        Log::info('Sites Data:', $sites);
+
+        return view('lookup-results', compact('breakageData', 'sites'));
     }
 
     public function showSubmitForm()

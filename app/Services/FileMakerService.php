@@ -33,18 +33,18 @@ class FileMakerService
             $uri = $dbName . "/sessions";
             $url = $this->baseUrl . $uri;
             $authHeader = "Basic " . base64_encode("{$this->username}:{$this->password}");
-        
+
             $response = $this->client->post($url, [
                 'headers' => ['Authorization' => $authHeader],
                 'verify' => false // Bypass SSL verification TURN OFF IN PRODUCTION
             ]);
-        
+
             // Decode the response body to an array
             $responseData = json_decode($response->getBody()->getContents(), true);
-            
-            //Log the raw response data
+
+            // Log the raw response data
             Log::info('Token Response:', $responseData);
-        
+
             // Check for the existence of the token in the response data
             if ($response->getStatusCode() === 200 && isset($responseData['response']['token'])) {
                 $this->token = $responseData['response']['token'];
@@ -62,15 +62,15 @@ class FileMakerService
             return null;
         }
     }
-    
+
     private function releaseToken($token, $dbName = "InventoryTracker")
     {
         try {
             $this->client->delete("/fmi/data/vLatest/databases/{$dbName}/sessions/{$token}", [
                 'headers' => ['Authorization' => "Bearer {$token}"],
-                'verify' => false //TURN OFF IN PRODUCTION
+                'verify' => false // TURN OFF IN PRODUCTION
             ]);
-            Log::info('token released');
+            Log::info('Token released');
         } catch (GuzzleException $e) {
             Log::error('Failed to release token: ' . $e->getMessage());
         }
@@ -79,11 +79,11 @@ class FileMakerService
     public function fetchBreakageData($studentId)
     {
         $token = $this->getToken();
-    
+
         if (!$token) {
             return ['error' => 'Failed to retrieve token'];
         }
-    
+
         $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/_find";  // Adjusted endpoint for finding records
         $params = [  // Define the query parameters as JSON
             'query' => [
@@ -94,26 +94,26 @@ class FileMakerService
         ];
 
         Log::info('Requesting token with Basic Auth', ['url' => $url, 'params' => $params]);
-    
+
         try {
             // Make a POST request to the find endpoint with the query parameters
             $response = $this->client->post($url, [
                 'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
                 'json' => $params,
-                'verify' => false //TURN OFF IN PRODUCTION
+                'verify' => false // TURN OFF IN PRODUCTION
             ]);
-    
+
             $data = json_decode($response->getBody()->getContents(), true);
             Log::info('Fetch Breakage Data Response:', $data);
-            $this->releaseToken($token,"InventoryTracker");
-    
+            $this->releaseToken($token, "InventoryTracker");
+
             if (isset($data['response'])) {
                 return $data;  // Return only the response part if needed, adjust based on actual API response
             } else {
                 return ['error' => 'No data found'];  // Handle the case where no data is returned
             }
         } catch (GuzzleException $e) {
-            $this->releaseToken($token,"InventoryTracker");
+            $this->releaseToken($token, "InventoryTracker");
             Log::error('Failed to fetch breakage data: ' . $e->getMessage());
             return ['error' => 'Failed to fetch breakage data'];
         }
@@ -122,11 +122,11 @@ class FileMakerService
     public function getSites($query = "*")
     {
         $token = $this->getToken();
-    
+
         if (!$token) {
             return ['error' => 'Failed to retrieve token'];
         }
-    
+
         $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/dapi_Sites_List/_find";  // Adjusted endpoint for finding records
         $params = [  // Define the query parameters as JSON
             'query' => [
@@ -135,29 +135,28 @@ class FileMakerService
                 ]
             ]
         ];
-    
+
         try {
             // Make a POST request to the find endpoint with the query parameters
             $response = $this->client->post($url, [
                 'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
                 'json' => $params,
-                'verify' => false //TURN OFF IN PRODUCTION
+                'verify' => false // TURN OFF IN PRODUCTION
             ]);
-    
+
             $data = json_decode($response->getBody()->getContents(), true);
             Log::info('Fetch Sites Response:', $data);
-            $this->releaseToken($token,"InventoryTracker");
-    
+            $this->releaseToken($token, "InventoryTracker");
+
             if (isset($data['response'])) {
                 return $data;  // Return only the response part if needed, adjust based on actual API response
             } else {
                 return ['error' => 'No data found'];  // Handle the case where no data is returned
             }
         } catch (GuzzleException $e) {
-            $this->releaseToken($token,"InventoryTracker");
+            $this->releaseToken($token, "InventoryTracker");
             Log::error('Failed to fetch sites data: ' . $e->getMessage());
             return ['error' => 'Failed to fetch sites data'];
         }
     }
-    
 }

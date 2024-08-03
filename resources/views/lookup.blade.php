@@ -8,7 +8,7 @@
 <body style="background-color: #f7fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;">
     <div style="background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px;">
         <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: #2d3748;">Look up a Student's iPad Damage History</h2>
-        <form action="{{ route('lookup.submit')}}" method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <form action="/lookup" method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
             @csrf
             <div class="form-group" style="margin-bottom: 1.5rem;">
                 <label for="student_id" style="display: block; color: #4a5568;">Student ID</label>

@@ -39,7 +39,33 @@ class BreakageController extends Controller
 
     public function submitBreakage(Request $request)
     {
-        // Handle form submission logic and interact with FileMaker API
+        $data = $request->all();
+        $data['date'] = date('m-d-Y');  // Add today's date to the data in US standard
+    
+        try {
+            $result = $this->fileMakerService->newBreakage($data);
+            Log::info('Submission result: ', $result);
+    
+            if (isset($result['response']) && $result['messages'][0]['message'] == 'OK') {
+                return redirect()->route('confirmation')->with('status', 'success');
+            } else {
+                return view('lookup-results', [
+                    'breakageData' => $this->fileMakerService->fetchBreakageData($data['student_id']),
+                    'sites' => $this->fileMakerService->getSites(),
+                    'error' => 'There was an error submitting your breakage report. Please try again.',
+                    'submittedData' => $data
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error submitting breakage report: ' . $e->getMessage());
+            return view('lookup-results', [
+                'breakageData' => $this->fileMakerService->fetchBreakageData($data['student_id']),
+                'sites' => $this->fileMakerService->getSites(),
+                'error' => 'There was an error submitting your breakage report. Please try again.',
+                'submittedData' => $data
+            ]);
+        }
     }
+    
 }
 

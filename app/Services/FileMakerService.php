@@ -79,12 +79,13 @@ class FileMakerService
     public function fetchBreakageData($studentId)
     {
         $token = $this->getToken();
-
+    
         if (!$token) {
             return ['error' => 'Failed to retrieve token'];
         }
-
-        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/_find";  // Adjusted endpoint for finding records
+    
+        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/_find";
+        $url2 = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_Students/_find";
         $params = [  // Define the query parameters as JSON
             'query' => [
                 [
@@ -92,32 +93,50 @@ class FileMakerService
                 ]
             ]
         ];
-
-        // Log::info('Requesting token with Basic Auth', ['url' => $url, 'params' => $params]);
-
+    
         try {
-            // Make a POST request to the find endpoint with the query parameters
-            $response = $this->client->post($url, [
+            // Fetch breakage data
+            $breakageResponse = $this->client->post($url, [
                 'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
                 'json' => $params,
                 'verify' => false // TURN OFF IN PRODUCTION
             ]);
-
-            $data = json_decode($response->getBody()->getContents(), true);
-            Log::info('Fetch Breakage Data Response:', $data);
+    
+            $breakageData = json_decode($breakageResponse->getBody()->getContents(), true);
+    
+            // Fetch student data
+            $studentResponse = $this->client->post($url2, [
+                'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
+                'json' => $params,
+                'verify' => false // TURN OFF IN PRODUCTION
+            ]);
+    
+            $studentData = json_decode($studentResponse->getBody()->getContents(), true);
+            
+    
+            // Release the token
             $this->releaseToken($token, "InventoryTracker");
-
-            if (isset($data['response'])) {
-                return $data;  // Return only the response part if needed, adjust based on actual API response
+    
+            // Combine data
+            $data = [
+                'breakageData' => $breakageData ?? null,
+                'studentData' => $studentData ?? null,
+            ];
+            // Log::info('Fetch Student and Breakage Data Response:', $data);
+    
+            if (!empty($data['breakageData']) || !empty($data['studentData'])) {
+                return $data;
             } else {
-                return ['error' => 'No data found'];  // Handle the case where no data is returned
+                return ['error' => 'No data found'];
             }
         } catch (GuzzleException $e) {
+            // Ensure the token is released in case of an error
             $this->releaseToken($token, "InventoryTracker");
-            Log::error('Failed to fetch breakage data: ' . $e->getMessage());
-            return ['error' => 'Failed to fetch breakage data'];
+            Log::error('Failed to fetch data: ' . $e->getMessage());
+            return ['error' => 'Failed to fetch data'];
         }
     }
+    
 
     public function fetchBreakageDataForDevice($studentId, $equipment)
     {
@@ -270,11 +289,9 @@ class FileMakerService
         // Log::info('Breakage Count: ' . $count);
 
         
-        // Lookup cost
+        /* LOOK UP COST */
         $costData = $this->costLookup($data['damage_type'], $data['equipment'], $count+1);
         $cost = $costData['response']['data'][0]['fieldData']['Cost'];
-        // Log::info('Breakage Cost:' . $cost);
-        // Log::info('Data Date:' . $data['date']);
 
     
         $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/records";

@@ -8,6 +8,7 @@
 </p>
 
 ## START UP
+cd breakagePortal
 php artisan serve
 
 

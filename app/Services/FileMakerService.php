@@ -137,7 +137,6 @@ class FileMakerService
         }
     }
     
-
     public function fetchBreakageDataForDevice($studentId, $equipment)
     {
         $token = $this->getToken();
@@ -191,6 +190,9 @@ class FileMakerService
     public function costLookup($damageType, $equipment, $incidentNo)
     {
         $token = $this->getToken();
+        if ($incidentNo > 4) {
+          $incidentNo=4;
+        }
 
         if (!$token) {
             return ['error' => 'Failed to retrieve token'];
@@ -234,6 +236,48 @@ class FileMakerService
         }
     }
 
+    public function faLookup($FAno)
+    {
+        $token = $this->getToken();
+
+        if (!$token) {
+            return ['error' => 'Failed to retrieve token'];
+        }
+
+        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_Inventory/_find";  // Adjusted endpoint for finding records
+        $params = [  // Define the query parameters as JSON
+            'query' => [
+                [
+                    'FANo' => $FAno,
+                ]
+            ]
+        ];
+        Log::info('FA Number Params: ', $params);
+
+        try {
+            // Make a POST request to the find endpoint with the query parameters
+            $response = $this->client->post($url, [
+                'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
+                'json' => $params,
+                'verify' => false // TURN OFF IN PRODUCTION
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+            Log::info('Fetch FA Lookup Response:', $data);
+            $this->releaseToken($token, "InventoryTracker");
+
+            if (isset($data['response'])) {
+                return $data; 
+            } else {
+                return ['error' => 'FA: No data found']; 
+            }
+        } catch (GuzzleException $e) {
+            $this->releaseToken($token, "InventoryTracker");
+            Log::error('Failed to fetch FA Lookup: ' . $e->getMessage());
+            return ['error' => 'Failed to fetch FA Lookup'];
+        }
+    }
+
     public function getSites($query = "*")
     {
         $token = $this->getToken();
@@ -242,7 +286,7 @@ class FileMakerService
             return ['error' => 'Failed to retrieve token'];
         }
 
-        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/dapi_Sites_List/_find";  // Adjusted endpoint for finding records
+        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_Sites_List/_find";  // Adjusted endpoint for finding records
         $params = [  // Define the query parameters as JSON
             'query' => [
                 [
@@ -281,19 +325,29 @@ class FileMakerService
         if (!$token) {
             return ['error' => 'Failed to retrieve token'];
         }
+
+        $formData=$data;
+        Log::info('Submit Form Data: ', $formData);
     
         // Fetch breakage data for the device
         // Log::info('Submitted Data: ', $data);
         $breakageDataForDevice = $this->fetchBreakageDataForDevice($data['student_id'], $data['equipment']);
         $count = $breakageDataForDevice['response']['dataInfo']['foundCount'];
         // Log::info('Breakage Count: ' . $count);
-
         
         /* LOOK UP COST */
         $costData = $this->costLookup($data['damage_type'], $data['equipment'], $count+1);
+        Log::info('Cost Data: ', $costData);
         $cost = $costData['response']['data'][0]['fieldData']['Cost'];
+        
+        /* LOOK UP FA */
+        $faData = $this->faLookup($data['fa']);
+        Log::info('FA Data: ', $faData);
+        $model = $faData['response']['data'][0]['fieldData']['Model'];
+        $serialNum = $faData['response']['data'][0]['fieldData']['SerialNumber'];
 
-    
+        
+        /* CREATE DAMAGE RECORD */
         $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/Web_DamagedEquip/records";
         $params = [
             'fieldData' => [
@@ -311,7 +365,7 @@ class FileMakerService
         if (!empty($data['notes'])) {
           $params['fieldData']['Notes'] = $data['notes'];
         }
-        Log::info('Submit Breakage Record Params: ', $params);
+        Log::info('Submit Damage Record Params: ', $params);
     
         try {
             // Make a POST request to the find endpoint with the query parameters
@@ -323,6 +377,55 @@ class FileMakerService
     
             $data = json_decode($response->getBody()->getContents(), true);
             // Log::info('Fetch Breakage Form Submit Response:', $data);
+            // $this->releaseToken($token, "InventoryTracker");
+    
+            if (isset($data['response'])) {
+              Log::info('Submitted Damage Record: ', $data);  // Return only the response part if needed, adjust based on actual API response
+            } else {
+                return ['error' => 'No data found'];  // Handle the case where no data is returned
+            }
+        } catch (GuzzleException $e) {
+            $this->releaseToken($token, "InventoryTracker");
+            Log::error('Failed to create breakage record: ' . $e->getMessage());
+            return ['error' => 'Failed to create breakage record'];
+        }
+        
+        /* CREATE WO RECORD */
+        $url = "/fmi/data/vLatest/databases/InventoryTracker/layouts/dapi_TechOrders/records";
+        $params = [
+            'fieldData' => [
+                'FixedAsset' => $formData['fa'],
+                'Equipment' => $formData['equipment'],
+                'Model' => $model,
+                'SerialNo' => $serialNum,
+                'StudentID' => $formData['student_id'],
+                /*
+                'Contact' => $data['contact'],
+                'ContactEmail' => $data['contactEmail'],
+                */
+                'SubmittedBy' => '<<FormSubmitter>>', //REPLACE WITH USER DATA
+                'SubmitterEmail' => '<<FormSubmitterEmail>>', //REPLACE WITH USER DATA
+                'Status' => 'Submitted'
+                
+            ],
+        ];
+        if (!empty($formData['notes'])) {
+          $params['fieldData']['Problem'] = $formData['damage_type'].': '.$formData['notes'];
+        } else {
+          $params['fieldData']['Problem'] = $formData['damage_type'];
+        }
+        Log::info('Submit WO Record Params: ', $params);
+    
+        try {
+            // Make a POST request to the find endpoint with the query parameters
+            $response = $this->client->post($url, [
+                'headers' => ['Authorization' => "Bearer {$token}", 'Content-Type' => 'application/json'],
+                'json' => $params,
+                'verify' => false // TURN OFF IN PRODUCTION
+            ]);
+    
+            $data = json_decode($response->getBody()->getContents(), true);
+            Log::info('Create WO Response:', $data);
             $this->releaseToken($token, "InventoryTracker");
     
             if (isset($data['response'])) {
@@ -332,8 +435,8 @@ class FileMakerService
             }
         } catch (GuzzleException $e) {
             $this->releaseToken($token, "InventoryTracker");
-            Log::error('Failed to send Breakage Form Submit data: ' . $e->getMessage());
-            return ['error' => 'Failed to create breakage record'];
+            Log::error('Failed to create WO record: ' . $e->getMessage());
+            return ['error' => 'Failed to create WO record'];
         }
     }
     
